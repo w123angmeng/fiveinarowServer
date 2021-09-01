@@ -1,15 +1,52 @@
 // 引入 express 框架 -> 需 npm 安装
 var express = require('express');
-
+var UUID = require('node-uuid');
 var ws = require("nodejs-websocket")
-var game1 = null,game2 = null ,user1=null, user2=null, game1Ready = false , game2Ready = false;
+// Game Class
+var Game = function(obj) {
+	this.id = obj.id
+	this.user1 = obj.user1
+	this.user2 = obj.user2
+	this.status = 0
+}
+Game.prototype = {
+	
+}
+Game.getUniCode = function() {
+	return UUID.v1()
+}
+
+// User Class
+var User = function(obj) {
+	this.avatarUrl = obj.avatarUrl
+	this.nickName = obj.nickName
+	this.gender = obj.gender
+}
+User.prototype = {
+	
+}
+var curGame = null
+var data = {}
+var game1 = null,game2 = null ,user1 = null, user2=null, game1Ready = false , game2Ready = false;
 var server = ws.createServer(function(conn){
     conn.on("text", function (res) {
 		console.log("serve 接受数据",res,Object.prototype.toString.call(res)==='[object ArrayBuffer]')
 		let resObj = JSON.parse(res),
-			str = resObj.type
+			str = resObj.type,
+			id = resObj.id
 		
         console.log("收到的信息为:"+str, typeof resObj)
+		if(!id) {
+			var newGame = new Game({
+				id: Game.getUniCode(),
+				user1: new User(resObj.user1),
+				user2: null,
+				status: 0
+			})
+			id = newGame.id
+			data[newGame.id] = newGame
+		}
+		curGame = data[id]
         if(str==="game1"){
             game1 = conn;
             game1Ready = true;
@@ -38,7 +75,7 @@ var server = ws.createServer(function(conn){
     conn.on("error", function (code, reason) {
         console.log("异常关闭")
     });
-}).listen(8082)
+}).listen(8081)
 console.log("WebSocket建立完毕")
 /**
  * 初始化框架,并将初始化后的函数给予 '当前页面'全局变量 app
@@ -61,7 +98,7 @@ app.get('/', function(req, res) {
     res.send('Hello World');
 })
 
-var server = app.listen(8081, function() {
+var server = app.listen(8082, function() {
 
     var host = server.address().address
     var port = server.address().port
